@@ -53,7 +53,7 @@ class UserProfile(models.Model):
         on_delete=models.CASCADE,
         related_name='profile'
     )
-    cpf = models.CharField(max_length=14, unique=True)
+    cpf = models.CharField(max_length=14, unique=True, null=True, blank=True)
     address = models.TextField(null=True, blank=True)
     emergency_contact = models.CharField(max_length=100, null=True, blank=True)
     medical_conditions = models.TextField(null=True, blank=True)
