@@ -51,7 +51,7 @@ class AuthViewSet(viewsets.ViewSet):
             refresh = RefreshToken.for_user(user)
             return Response({
                 'refresh': str(refresh),
-                'access': str(refresh.access_token),
+                'access': str(refresh.access_token),                                                
                 'user': self.serializer_class(user).data
             })
         return Response({
