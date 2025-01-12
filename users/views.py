@@ -7,9 +7,13 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.contrib.auth import authenticate
 from django.utils.translation import gettext_lazy as _
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
 from .serializers import UserSerializer
 from .models import User
-import logging; logger = logging.getLogger(__name__)
+import logging
+
+logger = logging.getLogger(__name__)
 
 class AuthViewSet(viewsets.ViewSet):
     serializer_class = UserSerializer
@@ -28,6 +32,7 @@ class AuthViewSet(viewsets.ViewSet):
                     'user': self.serializer_class(user).data
                 }, status=status.HTTP_201_CREATED)
             except Exception as e:
+                logger.error(f"Error during registration: {e}")
                 return Response({
                     'error': str(e)
                 }, status=status.HTTP_400_BAD_REQUEST)
@@ -42,6 +47,13 @@ class AuthViewSet(viewsets.ViewSet):
         if not email or not password:
             return Response({
                 'error': _('Por favor, forneça email e senha.')
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            validate_email(email)
+        except ValidationError:
+            return Response({
+                'error': _('Email inválido.')
             }, status=status.HTTP_400_BAD_REQUEST)
 
         user = authenticate(request, email=email, password=password)
@@ -68,7 +80,6 @@ class AuthViewSet(viewsets.ViewSet):
     def logout(self, request):
         try:
             refresh_token = request.data.get("refresh")
-            logger.debug("mensagem")
             if not refresh_token:
                 return Response(
                     {"error": _("Refresh token é necessário")},
@@ -88,6 +99,7 @@ class AuthViewSet(viewsets.ViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         except Exception as e:
+            logger.error(f"Error during logout: {e}")
             return Response(
                 {"error": str(e)},
                 status=status.HTTP_400_BAD_REQUEST
