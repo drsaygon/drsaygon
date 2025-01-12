@@ -9,7 +9,7 @@ from django.contrib.auth import authenticate
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
-from .serializers import UserSerializer
+from .serializers import UserSerializer, UserUpdateSerializer
 from .models import User
 import logging
 
@@ -104,3 +104,38 @@ class AuthViewSet(viewsets.ViewSet):
                 {"error": str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+class UserViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+    @action(detail=False, methods=['put', 'patch'])
+    def update_profile(self, request):
+        try:
+            user = request.user
+            partial = request.method == 'PATCH'
+            
+            serializer = UserUpdateSerializer(
+                user,
+                data=request.data,
+                partial=partial,
+                context={'request': request}
+            )
+
+            if serializer.is_valid():
+                serializer.save()
+                return Response({
+                    'message': _('Perfil atualizado com sucesso'),
+                    'user': serializer.data
+                }, status=status.HTTP_200_OK)
+            
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        except Exception as e:
+            logger.error(f"Error updating user profile: {e}")
+            return Response({
+                'error': _('Erro ao atualizar o perfil')
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
