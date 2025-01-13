@@ -68,6 +68,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    email_verified = models.BooleanField(
+        _('email verified'),
+        default=False,
+        help_text=_('Designates whether this user has verified their email address.'),
+    )
+    email_verification_token = models.CharField(max_length=100, blank=True, null=True)
+    email_verification_token_created = models.DateTimeField(null=True, blank=True)
+
     objects = UserManager()
 
     USERNAME_FIELD = 'email'

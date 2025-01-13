@@ -66,6 +66,24 @@ class UserSerializer(serializers.ModelSerializer):
             instance.profile.save()
 
         return instance
+    
+    def create(self, validated_data):
+        profile_data = validated_data.pop('profile', None)
+        password = validated_data.pop('password')
+        
+        # Define o usuário como inativo até a verificação
+        validated_data['is_active'] = False
+        
+        user = User(**validated_data)
+        user.set_password(password)
+        user.save()
+
+        if profile_data:
+            UserProfile.objects.create(user=user, **profile_data)
+        else:
+            UserProfile.objects.create(user=user)
+
+        return user    
 
 class UserUpdateProfileSerializer(serializers.ModelSerializer):
     class Meta:

@@ -11,6 +11,11 @@ from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from .serializers import UserSerializer, UserUpdateSerializer
 from .models import User
+
+from .utils import send_verification_email, is_verification_token_expired
+from .tokens import email_verification_token_generator
+from django.shortcuts import get_object_or_404
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -104,6 +109,110 @@ class AuthViewSet(viewsets.ViewSet):
                 {"error": str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
+        
+    @action(detail=False, methods=['post'])
+    @permission_classes([AllowAny])
+    def register(self, request):
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            try:
+                user = serializer.save()
+                
+                # Enviar email de verificação
+                domain = request.META.get('HTTP_ORIGIN', 'http://localhost:3000')
+                send_verification_email(user, domain)
+                
+                return Response({
+                    'message': _('Registro realizado com sucesso. Por favor, verifique seu email para ativar sua conta.'),
+                    'user': self.serializer_class(user).data
+                }, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                logger.error(f"Error during registration: {e}")
+                return Response({
+                    'error': str(e)
+                }, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['get'])
+    @permission_classes([AllowAny])
+    def verify_email(self, request):
+        token = request.query_params.get('token')
+        email = request.query_params.get('email')
+        
+        if not token or not email:
+            return Response({
+                'error': _('Parâmetros inválidos.')
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            user = get_object_or_404(User, email=email)
+            
+            if user.email_verified:
+                return Response({
+                    'message': _('Email já verificado.')
+                }, status=status.HTTP_200_OK)
+                
+            if user.email_verification_token != token:
+                return Response({
+                    'error': _('Token inválido.')
+                }, status=status.HTTP_400_BAD_REQUEST)
+                
+            if is_verification_token_expired(user.email_verification_token_created):
+                return Response({
+                    'error': _('Token expirado. Solicite um novo email de verificação.')
+                }, status=status.HTTP_400_BAD_REQUEST)
+                
+            if not email_verification_token_generator.check_token(user, token):
+                return Response({
+                    'error': _('Token inválido.')
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            user.email_verified = True
+            user.is_active = True
+            user.email_verification_token = None
+            user.email_verification_token_created = None
+            user.save()
+            
+            return Response({
+                'message': _('Email verificado com sucesso. Você já pode fazer login.')
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.error(f"Error during email verification: {e}")
+            return Response({
+                'error': _('Erro ao verificar email.')
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['post'])
+    @permission_classes([AllowAny])
+    def resend_verification(self, request):
+        email = request.data.get('email')
+        
+        if not email:
+            return Response({
+                'error': _('Email é obrigatório.')
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            user = get_object_or_404(User, email=email)
+            
+            if user.email_verified:
+                return Response({
+                    'message': _('Email já verificado.')
+                }, status=status.HTTP_200_OK)
+            
+            domain = request.META.get('HTTP_ORIGIN', 'http://localhost:3000')
+            send_verification_email(user, domain)
+            
+            return Response({
+                'message': _('Novo email de verificação enviado.')
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.error(f"Error resending verification email: {e}")
+            return Response({
+                'error': _('Erro ao reenviar email de verificação.')
+            }, status=status.HTTP_400_BAD_REQUEST)        
 
 class UserViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
