@@ -8,6 +8,4 @@ router.register(r'users', UserViewSet, basename='users')
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('auth/verify-email/', AuthViewSet.as_view({'get': 'verify_email'}), name='verify-email'),
-    path('auth/resend-verification/', AuthViewSet.as_view({'post': 'resend_verification'}), name='resend-verification'),
 ]
