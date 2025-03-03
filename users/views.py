@@ -224,6 +224,17 @@ class UserViewSet(viewsets.ViewSet):
             user = request.user
             partial = request.method == 'PATCH'
             
+            # Handle password update
+            if 'current_password' in request.data and 'new_password' in request.data:
+                if not user.check_password(request.data['current_password']):
+                    return Response(
+                        {'error': _('Senha atual incorreta')},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                user.set_password(request.data['new_password'])
+                user.save()
+                return Response({'message': _('Senha atualizada com sucesso')})
+
             serializer = UserUpdateSerializer(
                 user,
                 data=request.data,
