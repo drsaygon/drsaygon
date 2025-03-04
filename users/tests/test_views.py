@@ -9,6 +9,7 @@ from unittest.mock import patch
 from django.core import mail
 from django.utils.timezone import now
 from users.tokens import email_verification_token_generator
+from users.models import User, UserProfile 
 
 User = get_user_model()
 
@@ -35,6 +36,7 @@ def user_data():
 
 @pytest.fixture
 def authenticated_user(db):
+    # Criar o usuário
     user = User.objects.create_user(
         email="user@example.com",
         password="Test@1234",
@@ -43,6 +45,16 @@ def authenticated_user(db):
         is_active=True,
         email_verified=True
     )
+    
+    # Criar o perfil manualmente
+    UserProfile.objects.create(
+        user=user,
+        cpf="123.456.789-00",
+        address="Rua Teste, 123",
+        emergency_contact="Jane Doe",
+        medical_conditions="Nenhuma"
+    )
+    
     return user
 
 @pytest.fixture
@@ -151,7 +163,13 @@ class TestAuthViewSet:
 @pytest.mark.django_db
 class TestUserViewSet:
     def test_update_profile(self, auth_client, authenticated_user):
+        # Garantir que o perfil existe para o usuário autenticado
+        assert hasattr(authenticated_user, 'profile'), "O usuário não possui um perfil associado."
+
+        # URL para atualização do perfil
         url = reverse("users-update-profile")
+
+        # Dados para atualização do perfil
         data = {
             "first_name": "NewName",
             "profile": {
@@ -159,11 +177,22 @@ class TestUserViewSet:
                 "address": "Nova Rua, 456"
             }
         }
+
+        # Fazer a requisição PATCH para atualizar o perfil
         response = auth_client.patch(url, data=data, format="json")
-        assert response.status_code == 200
+
+        # Verificar se a resposta foi bem-sucedida
+        assert response.status_code == 200, f"Erro na resposta: {response.data}"
+
+        # Atualizar o objeto do usuário autenticado do banco de dados
         authenticated_user.refresh_from_db()
-        assert authenticated_user.phone == "32999999997"
-        assert authenticated_user.profile.address == "Nova Rua Exemplo, 456"
+
+        # Verificar se o primeiro nome foi atualizado
+        assert authenticated_user.first_name == "NewName", "O primeiro nome não foi atualizado corretamente."
+
+        # Verificar se os campos do perfil foram atualizados
+        assert authenticated_user.profile.cpf == "987.654.321-00", "O CPF do perfil não foi atualizado corretamente."
+        assert authenticated_user.profile.address == "Nova Rua, 456", "O endereço do perfil não foi atualizado corretamente."
 
     def test_update_password(self, auth_client, authenticated_user):
         url = reverse("users-update-profile")

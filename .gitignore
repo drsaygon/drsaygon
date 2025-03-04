@@ -1,1 +1,37 @@
-*.pyc
+# Ignore arquivos compilados do Python
+__pycache__/
+*.py[cod]
+
+# Ignore ambiente virtual
+venv/
+ENV/
+env/
+
+# Ignore pacotes distribuíveis
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# IDEs e editores
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Logs e bancos de dados
+*.log
+*.sqlite3
+
+# Outros
+.DS_Store
