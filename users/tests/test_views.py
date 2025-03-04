@@ -9,7 +9,7 @@ from unittest.mock import patch
 from django.core import mail
 from django.utils.timezone import now
 from users.tokens import email_verification_token_generator
-from users.models import User, UserProfile 
+from users.models import User, UserProfile # import necessário para que o update_profile funcione
 
 User = get_user_model()
 
