@@ -99,7 +99,7 @@ DATABASES = {
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'marque_facil',
+        'NAME': 'teste',
         'USER': 'postgres',
         'PASSWORD': 'Metal9999a',
         'HOST': 'localhost',
